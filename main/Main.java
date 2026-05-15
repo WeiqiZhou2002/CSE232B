@@ -55,34 +55,39 @@ public class Main {
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outPath))) {
-            if (nodes == null || nodes.isEmpty()) return;
+            bw.write("<RESULT>");
+            bw.newLine();
 
-            for (Node n : nodes) {
-                switch (n.getNodeType()) {
-                    case Node.TEXT_NODE:
-                        bw.write(n.getTextContent());
-                        bw.newLine();
-                        break;
-                    case Node.ATTRIBUTE_NODE:
-                        bw.write("@" + n.getNodeName() + "=\"" + n.getNodeValue() + "\"");
-                        bw.newLine();
-                        break;
-                    case Node.DOCUMENT_NODE:
-                        // Serialize the document element rather than a placeholder.
-                        StringWriter dsw = new StringWriter();
-                        transformer.transform(
-                            new DOMSource(((org.w3c.dom.Document) n).getDocumentElement()),
-                            new StreamResult(dsw));
-                        bw.write(dsw.toString().trim());
-                        bw.newLine();
-                        break;
-                    default:
-                        StringWriter sw = new StringWriter();
-                        transformer.transform(new DOMSource(n), new StreamResult(sw));
-                        bw.write(sw.toString().trim());
-                        bw.newLine();
+            if (nodes != null) {
+                for (Node n : nodes) {
+                    switch (n.getNodeType()) {
+                        case Node.TEXT_NODE:
+                            bw.write(n.getTextContent());
+                            bw.newLine();
+                            break;
+                        case Node.ATTRIBUTE_NODE:
+                            bw.write("@" + n.getNodeName() + "=\"" + n.getNodeValue() + "\"");
+                            bw.newLine();
+                            break;
+                        case Node.DOCUMENT_NODE:
+                            StringWriter dsw = new StringWriter();
+                            transformer.transform(
+                                new DOMSource(((org.w3c.dom.Document) n).getDocumentElement()),
+                                new StreamResult(dsw));
+                            bw.write(dsw.toString().trim());
+                            bw.newLine();
+                            break;
+                        default:
+                            StringWriter sw = new StringWriter();
+                            transformer.transform(new DOMSource(n), new StreamResult(sw));
+                            bw.write(sw.toString().trim());
+                            bw.newLine();
+                    }
                 }
             }
+
+            bw.write("</RESULT>");
+            bw.newLine();
         }
     }
 }
