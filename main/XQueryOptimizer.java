@@ -46,6 +46,8 @@ public class XQueryOptimizer {
             for (Binding b : groups.get(i).bindings) {
                 System.out.print(b.var + " ");
              }
+             System.out.println("subquery " + i + ":");
+            System.out.println(buildTupleSubquery(groups.get(i)));
             System.out.println();
         }
 
@@ -195,5 +197,42 @@ public class XQueryOptimizer {
 
             joins.add(new JoinCondition(leftGroup, rightGroup, left.substring(1), right.substring(1)));
         }
+    }
+
+    // helper to preserve original order
+    private static void sortGroupByOriginalOrder(
+        VariableGroup group,
+        List<Binding> allBindings) {
+
+    group.bindings.sort((a, b) ->
+        Integer.compare(allBindings.indexOf(a), allBindings.indexOf(b))
+    );
+}
+
+    private static String buildTupleSubquery(VariableGroup group){
+        StringBuilder sb = new StringBuilder();
+        sb.append("(for ");
+        for(int i=0;i<group.bindings.size();i++){
+            Binding b = group.bindings.get(i);
+
+            if(i>0){
+                sb.append(", ");
+            }
+
+            sb.append(b.var).append(" in ").append(b.expr);
+        }
+        sb.append(" return <tuple>{");
+        for(int i=0;i<group.bindings.size();i++){
+            Binding b = group.bindings.get(i);
+            String attr = b.var.substring(1);
+
+            if(i>0){
+                sb.append(", ");
+            }
+
+            sb.append("<").append(attr).append(">{").append(b.var).append("}</").append(attr).append(">");
+        }
+        sb.append("}</tuple>)");
+        return sb.toString();
     }
 }
