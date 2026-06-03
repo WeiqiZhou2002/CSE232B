@@ -14,7 +14,9 @@ import org.w3c.dom.Node;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -36,13 +38,14 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 3) {
-            System.err.println("Usage: java main.Main <xml> <query> <output>");
+            System.err.println("Usage: java main.Main <xml> <query> <rewrite-output> <result-output>");
             System.exit(1);
         }
 
         String xmlPath    = args[0];
         String queryPath  = args[1];
-        String outputPath = args[2];
+        String rewritePath = args.length >= 4 ? args[2] : null;
+        String outputPath = args.length >= 4 ? args[3] : args[2];
 
         String query = new String(Files.readAllBytes(Paths.get(queryPath))).trim();
 
@@ -55,6 +58,9 @@ public class Main {
             XQueryParser parser = new XQueryParser(tokens);
             ParseTree tree = parser.xq();
             String optimizedQuery = XQueryOptimizer.optimize(query, (XQueryParser.XqContext)tree);
+            if (rewritePath != null) {
+                writeText(optimizedQuery, rewritePath);
+            }
             if (!optimizedQuery.equals(query)) {
                 CharStream optimizedInput = CharStreams.fromString(optimizedQuery);
                 XQueryLexer optimizedLexer = new XQueryLexer(optimizedInput);
@@ -71,6 +77,9 @@ public class Main {
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             XPathParser parser = new XPathParser(tokens);
             ParseTree tree = parser.ap();
+            if (rewritePath != null) {
+                writeText(query, rewritePath);
+            }
             XPathEngine.docPathOverride = xmlPath;
             XPathEngine engine = new XPathEngine();
             result = engine.visit(tree);
@@ -79,12 +88,27 @@ public class Main {
         serialize(result, outputPath);
     }
 
+    private static void writeText(String text, String outPath) throws Exception {
+        ensureParentDirectory(outPath);
+        Files.write(
+            Paths.get(outPath),
+            (text + System.lineSeparator()).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void ensureParentDirectory(String outPath) throws Exception {
+        Path parent = Paths.get(outPath).getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+    }
+
     private static void serialize(List<Node> nodes, String outPath) throws Exception {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 
+        ensureParentDirectory(outPath);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outPath))) {
             bw.write("<RESULT>");
             bw.newLine();

@@ -5,9 +5,9 @@
 #   make parser             regenerate XPath and XQuery parsers
 #   make xpath-parser       only regenerate parser after editing XPath.g4
 #   make xquery-parser      only regenerate parser after editing XQuery.g4
-#   make run Q='...' [XML=...] [OUT=...]
+#   make run Q='...' [XML=...] [REWRITE=...] [OUT=...]
 #                           run one ad-hoc query against XML (default test.xml),
-#                           writing the result to OUT (default out.xml), and print it.
+#                           writing the rewritten query to REWRITE and result to OUT.
 #   make test               run smoke tests for Milestones 1, 2, and 3
 #   make test-m1            run the 5 XPath course example queries
 #   make test-m2            run XQuery examples over j_caesar.xml
@@ -68,12 +68,17 @@ classes: parser
 XML ?= data/test.xml
 Q   ?= doc("data/test.xml")/library/book
 OUT ?= outputs/out.xml
+REWRITE ?= outputs/rewrite.xq
 
 run: classes
 	@mkdir -p $(dir $(OUT))
+	@mkdir -p $(dir $(REWRITE))
 	@printf '%s' '$(Q)' > .query.tmp
-	java -cp $(CP) main.Main $(XML) .query.tmp $(OUT)
+	java -cp $(CP) main.Main $(XML) .query.tmp $(REWRITE) $(OUT)
 	@rm -f .query.tmp
+	@echo "=== $(REWRITE) ==="
+	@cat $(REWRITE)
+	@echo ""
 	@echo "=== $(OUT) ==="
 	@cat $(OUT)
 	@echo ""
@@ -99,7 +104,7 @@ test-m1: classes
 	@printf '%s' 'doc("data/j_caesar.xml")//ACT[not .//SPEAKER/text() = "CAESAR"]'                                                             > outputs/q5.txt
 	@for i in 1 2 3 4 5; do \
 	  echo "=== Query $$i: $$(cat outputs/q$$i.txt) ==="; \
-	  java -cp $(CP) main.Main $(TEST_XML) outputs/q$$i.txt outputs/out$$i.xml; \
+	  java -cp $(CP) main.Main $(TEST_XML) outputs/q$$i.txt outputs/rewrite$$i.xq outputs/out$$i.xml; \
 	  echo "--- outputs/out$$i.xml (first 40 lines) ---"; \
 	  head -40 outputs/out$$i.xml; \
 	  echo ""; \
@@ -131,13 +136,13 @@ test-m2: classes
 	  '       </speaks>' \
 	  '}</result>' > outputs/m2_q2.txt
 	@echo "=== Milestone 2 example 1 ==="
-	java -cp $(CP) main.Main $(TEST_XML) outputs/m2_q1.txt outputs/m2_example1.xml
+	java -cp $(CP) main.Main $(TEST_XML) outputs/m2_q1.txt outputs/m2_rewrite1.xq outputs/m2_example1.xml
 	@grep -q '<who>CAESAR</who>' outputs/m2_example1.xml
 	@grep -q '<act>ACT III</act>' outputs/m2_example1.xml
 	@head -20 outputs/m2_example1.xml
 	@echo ""
 	@echo "=== Milestone 2 example 2 ==="
-	java -cp $(CP) main.Main $(TEST_XML) outputs/m2_q2.txt outputs/m2_example2.xml
+	java -cp $(CP) main.Main $(TEST_XML) outputs/m2_q2.txt outputs/m2_rewrite2.xq outputs/m2_example2.xml
 	@grep -q '<speaks>' outputs/m2_example2.xml
 	@wc -l outputs/m2_example2.xml
 	@echo ""
@@ -148,21 +153,28 @@ test-m2: classes
 test-m3: classes
 	@mkdir -p outputs
 	@echo "=== Milestone 3 manual join ==="
-	java -cp $(CP) main.Main data/test.xml docs/join_test.xq outputs/m3_join_test.xml
+	java -cp $(CP) main.Main data/test.xml docs/join_test.xq outputs/m3_join_test_rewrite.xq outputs/m3_join_test.xml
+	@grep -q '^for ' outputs/m3_join_test_rewrite.xq
 	@grep -q '<joined>' outputs/m3_join_test.xml
 	@echo "=== Milestone 3 local filter join ==="
-	java -cp $(CP) main.Main data/test.xml docs/local_filter_join_test.xq outputs/m3_local_filter_join_test.xml
+	java -cp $(CP) main.Main data/test.xml docs/local_filter_join_test.xq outputs/m3_local_filter_join_test_rewrite.xq outputs/m3_local_filter_join_test.xml
+	@grep -q '^for ' outputs/m3_local_filter_join_test_rewrite.xq
+	@grep -q 'join(' outputs/m3_local_filter_join_test_rewrite.xq
 	@grep -q '<book id="2">' outputs/m3_local_filter_join_test.xml
 	@echo "=== Milestone 3 multi-key join ==="
-	java -cp $(CP) main.Main data/test.xml docs/multikey_join_test.xq outputs/m3_multikey_join_test.xml
+	java -cp $(CP) main.Main data/test.xml docs/multikey_join_test.xq outputs/m3_multikey_join_test_rewrite.xq outputs/m3_multikey_join_test.xml
+	@grep -q '^for ' outputs/m3_multikey_join_test_rewrite.xq
+	@grep -q 'join(' outputs/m3_multikey_join_test_rewrite.xq
 	@grep -q '<book id="1">' outputs/m3_multikey_join_test.xml
 	@grep -q '<book id="2">' outputs/m3_multikey_join_test.xml
 	@echo "=== Milestone 3 nested three-group join ==="
-	java -cp $(CP) main.Main data/test.xml docs/three_group_join_test.xq outputs/m3_three_group_join_test.xml
+	java -cp $(CP) main.Main data/test.xml docs/three_group_join_test.xq outputs/m3_three_group_join_test_rewrite.xq outputs/m3_three_group_join_test.xml
+	@grep -q '^for ' outputs/m3_three_group_join_test_rewrite.xq
 	@grep -q '<book id="1">' outputs/m3_three_group_join_test.xml
 	@grep -q '<book id="2">' outputs/m3_three_group_join_test.xml
 	@echo "=== Milestone 3 note-shaped query ==="
-	java -cp $(CP) main.Main data/books_join.xml docs/m3_note_shape_test.xq outputs/m3_note_shape_test.xml
+	java -cp $(CP) main.Main data/books_join.xml docs/m3_note_shape_test.xq outputs/m3_note_shape_test_rewrite.xq outputs/m3_note_shape_test.xml
+	@grep -q '^for ' outputs/m3_note_shape_test_rewrite.xq
 	@grep -q '<triplet>' outputs/m3_note_shape_test.xml
 	@wc -l outputs/m3_*.xml
 	@echo ""

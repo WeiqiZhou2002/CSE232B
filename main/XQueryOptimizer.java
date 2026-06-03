@@ -323,7 +323,7 @@ public class XQueryOptimizer {
         List<VariableGroup> groups,
         List<JoinCondition> joins, List<LocalCondition> locals) {
 
-    if (groups.size() <= 2 || joins.isEmpty()) {
+    if (groups.size() < 2 || joins.isEmpty()) {
         return null;
     }
     Set<Integer> included = new HashSet<>();

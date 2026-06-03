@@ -6,13 +6,14 @@ This project implements the CSE 232B XML query processor milestones:
 - **Milestone 2:** naive XQuery evaluation.
 - **Milestone 3:** join-aware XQuery optimization plus hash-join execution.
 
-The command-line driver accepts an XML input path, a query-file path, and an
-output path:
+The command-line driver accepts an XML input path, a query-file path, a rewrite
+output path, and a result output path:
 
 ```bash
 java -cp build/classes:tools/antlr-4.13.2-complete.jar main.Main \
   data/j_caesar.xml \
   outputs/q1.txt \
+  outputs/rewrite1.xq \
   outputs/out1.xml
 ```
 
@@ -69,12 +70,15 @@ Or call the driver directly:
 java -cp build/classes:tools/antlr-4.13.2-complete.jar main.Main \
   data/test.xml \
   docs/join_test.xq \
+  outputs/join_test_rewrite.xq \
   outputs/join_test.xml
 ```
 
 The first argument is the XML file supplied by the tester. Queries may use
 `doc("...")` or `document("...")`; the engine resolves those against the XML
-argument's directory.
+argument's directory. For Milestone 3, the third argument receives the rewritten
+join query as plain text, and the fourth argument receives the XML execution
+result.
 
 ## Tests
 
